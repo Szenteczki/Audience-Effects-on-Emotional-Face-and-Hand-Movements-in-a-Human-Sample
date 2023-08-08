@@ -1,4 +1,4 @@
-This repository contains the data and scripts needed to reproduce the analyses in our preprint, *Audience Effects on Emotional Face and Hand Movements in a Human Sample*. We used the software [OpenFace 2.0](https://github.com/TadasBaltrusaitis/OpenFace/wiki) and [Py-Feat](https://py-feat.org); if you wish to use these two software tools in your own research, please don't forget to cite them as well:
+This repository contains the data and scripts needed to reproduce the analyses in our preprint, *Audience Effects on Human Emotional Face and Hand Movements*. We used the software [OpenFace 2.0](https://github.com/TadasBaltrusaitis/OpenFace/wiki) and [Py-Feat](https://py-feat.org); if you wish to use these two software tools in your own research, please don't forget to cite them as well:
 
 - [OpenFace Citations](https://github.com/TadasBaltrusaitis/OpenFace/wiki#citation)
 - [Py-Feat preprint](https://arxiv.org/abs/2104.03509)
@@ -31,7 +31,7 @@ It is important to control variation in your input videos to get the most consis
 
 Additionally, you may want to crop out any faces visible in the video beside your subject of interest. There is an OpenFace binary for analyzing videos with multiple faces present (`FaceLandmarkVidMulti`); however, since we did not seek permission to analyze the facial expression data of the partners in the social condition, we opted to completely crop the partners out and use the single-face binary (`FeatureExtraction`) for both the alone and social condition footage.
 
-The most efficient way we found to crop our footage was by using `mpv` and the [`mpv-webm`](https://github.com/ekisu/mpv-webm) add-on script, which can be installed in Ubuntu as follows: 
+The most efficient way we found to crop our footage was by using `mpv` and the [`mpv-webm`](https://github.com/ekisu/mpv-webm) add-on script, which can be installed in Ubuntu 16.04 as follows: 
 
 `sudo apt install mpv`
 
@@ -45,7 +45,7 @@ Evenly lit, HD video is ideal, but in practice we found that OpenFace performed 
 
 ### 2 - Install OpenFace and Py-Feat
 
-Installing and running OpenFace and Py-Feat will require some basic knowledge of command-line (*e.g.* Terminal) tools. Both OpenFace and Py-Feat offer one-line installation scripts, but if these fail to run you may need to do some extra work installing dependencies and manually compiling C++ code. We found it easier to install and run OpenFace on [Ubuntu 16.04](https://ubuntu.com/tutorials/install-ubuntu-desktop-1604#1-overview), following the instructions [here](https://github.com/TadasBaltrusaitis/OpenFace/wiki/Unix-Installation). However, MacOS installation instructions are available [here](https://github.com/TadasBaltrusaitis/OpenFace/wiki/Mac-installation) if needed.
+Installing and running OpenFace and Py-Feat will require some basic knowledge of command-line (*e.g.* Terminal) tools. Both OpenFace and Py-Feat offer one-line installation scripts, but if these fail to run you may need to do some extra work installing dependencies and manually compiling C++ code. We found it easier to install and run OpenFace on [Ubuntu 16.04](https://ubuntu.com/tutorials/install-ubuntu-desktop-1604#1-overview), following the instructions [here](https://github.com/TadasBaltrusaitis/OpenFace/wiki/Unix-Installation). However, MacOS installation instructions are available [here](https://github.com/TadasBaltrusaitis/OpenFace/wiki/Mac-installation) if needed. Whether you proceed via the quick installation or manual compiling, we will use the binaries (i.e. the compiled executable files) produced by the installation process in the next steps.
 
 Py-Feat installation instructions can be found [here](https://py-feat.org/pages/intro.html#installation). As long as you have `pip` installed (see instructions [here](https://pip.pypa.io/en/stable/installation/) if needed), it should install with a single Terminal command in Linux and MacOS: `pip install py-feat`
 
@@ -53,7 +53,7 @@ Py-Feat installation instructions can be found [here](https://py-feat.org/pages/
 
 We provided a small script to automate the analysis of multiple video files using Openface: `scripts/batch.sh`
 
-To use this, you should copy your video files and the above script into the folder containing your compiled OpenFace binaries (search for the folder containing `FeatureExtraction`, which is the binary used by this script). Then, run `./batch.sh` from this folder. 
+To use this, you should copy your video files and the above script into the folder containing your OpenFace binaries. These should be in .../OpenFace/build/bin - alternatively, search for the folder containing `FeatureExtraction` (without any file extension), which is the binary used by this script. Then, run `./batch.sh` from this folder. 
 
 As Openface runs, it should create a new folder named `/processed/`. This contains the processed video files with facial landmark overlays, and output .csv files. You will use these .csv files for the next step of the analysis.
 
