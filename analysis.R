@@ -8,7 +8,7 @@ library(bayestestR)
 library(brms)
 library(bayesplot)
 
-home <- "" # FILL IN YOUR WORKING DIRECTORY HERE
+home <- "~/" # FILL IN YOUR WORKING DIRECTORY HERE
 setwd(home)
 
 set.seed(123)
@@ -125,7 +125,7 @@ obj1_alone_vs_social_all_ac <- all_df %>%
   convert_as_factor(private_id, valence, AU) %>% #fix
   mutate(., AU_activity = as.numeric(AU_activity)) %>% # fix
   mutate(., valence = factor(valence, levels = c("amusement","neutral","fear"))) # refactor so neutral is middle plot
-summary(obj1_alone_vs_social_all_ac)
+summary(obj1_alone_stat_df_ac)
 
 obj1_alone_vs_social_all_stat_ac <- obj1_alone_vs_social_all_ac %>%
   group_by(AU) %>% 
@@ -273,7 +273,7 @@ obj1_alone_vs_social_all <- all_df %>%
   convert_as_factor(private_id, valence, AU) %>% #fix
   mutate(., AU_intensity = as.numeric(AU_intensity)) %>% # fix
   mutate(., valence = factor(valence, levels = c("amusement","neutral","fear"))) # refactor so neutral is middle plot
-summary(obj1_alone_vs_social_all)
+summary(obj1_alone_stat_df)
 
 obj1_alone_vs_social_all_stat <- obj1_alone_vs_social_all %>%
   group_by(AU) %>% 
@@ -466,7 +466,6 @@ model1 <- brm(formula = AU_activity ~  condition * valence  + gender + ethnicity
 summary(model1)
 prior_summary(model1)
 hist(model_df$AU_activity)
-plot(model1)
 pp_check(model1, type = "stat", stat = 'mean', ndraws = 1000)
 traceplot_model1 <-plot(model1)#did chains behave well?
 
@@ -486,7 +485,7 @@ Figmodel1 <- mcmc_intervals(posterior,
                     prob_outer=0.95,
                     point_est = "mean")
 Figure1_posterior <- Figmodel1 +scale_x_continuous(limits=c(-1,2),breaks=scales::pretty_breaks(n=8))+
-  labs(x="Parameter estimate", y= " ", title="a")+
+  labs(x="Parameter estimate", y= " ", title=" ")+
   theme(axis.text.y=element_blank())+ theme_classic(base_size = 16, base_family = "sans")+
   scale_y_discrete(labels=c("b_conditionsocial"="alone vs. social condition", "b_valenceamusement"= "neutral vs. amusement", 
                             "b_valencefear"= "neutral vs. fear",
@@ -501,12 +500,12 @@ p1 = plot(conditional_effects(model1), plot=FALSE)
 ## Model 2: AU intensity
 model2 <- brm(formula = AU_intensity ~ condition * valence + gender + ethnicity + 
                 recognize_vid_binary + (1|private_id) + (1|stimulus), data=model_df, 
-              family=hurdle_lognormal(), warmup= 2000, iter = 10000, chains = 4, 
+              family=weibull(), warmup= 2000, iter = 10000, chains = 4, 
               control = list(adapt_delta = 0.99), file = "output/model2")
 hist(model_df$AU_intensity)
 range(model_df$AU_intensity)
 mean(model_df$AU_intensity)
-summary(model2)
+summary(model2)#warnings about max tree depth are unproblematic, see: https://mc-stan.org/misc/warnings.html
 prior_summary(model2)
 plot(model2)
 pp_check(model2, ndraws = 1000)
@@ -527,9 +526,9 @@ Figmodel2 <- mcmc_intervals(posterior,
                             prob_outer=0.95,
                             point_est = "mean")
 Figure2_posterior <- Figmodel2 +scale_x_continuous(limits=c(-1,2),breaks=scales::pretty_breaks(n=8))+
-  labs(x="Parameter estimate", y= " ", title="b")+
+  labs(x="Parameter estimate", y= " ", title="a")+
   theme(axis.text.y=element_blank())+ theme_classic(base_size = 16, base_family = "sans")+
-  scale_y_discrete(labels=c("b_conditionsocial"="alone vs. social condition", "b_valenceamusement"= expression(~bold("neutral vs. amusement")), 
+  scale_y_discrete(labels=c("b_conditionsocial"="alone vs. social condition", "b_valenceamusement"= "neutral vs. amusement", 
                             "b_valencefear"= expression(~bold("neutral vs. fear")),
                             "b_conditionsocial:valenceamusement" = "condition x valence type (neutral vs amusement)", 
                             "b_conditionsocial:valencefear" = "condition x valence type (neutral vs fear)"))+
@@ -563,7 +562,7 @@ Figmodel3 <- mcmc_intervals(posterior,
                             prob_outer=0.95,
                             point_est = "mean")
 Figure3_posterior <- Figmodel3 +scale_x_continuous(limits=c(-6,6),breaks=scales::pretty_breaks(n=8))+
-  labs(x="Parameter estimate", y= " ", title="c")+
+  labs(x="Parameter estimate", y= " ", title="b")+
   theme(axis.text.y=element_blank())+ theme_classic(base_size = 16, base_family = "sans")+
   scale_y_discrete(labels=c("b_conditionsocial"=expression(~bold("alone vs. social condition")), "b_valenceamusement"= expression(~bold("neutral vs. amusement")), 
                             "b_valencefear"= expression(~bold("neutral vs. fear")),
@@ -573,9 +572,13 @@ Figure3_posterior <- Figmodel3 +scale_x_continuous(limits=c(-6,6),breaks=scales:
 
 
 library(gridExtra)
-Figure1 <- grid.arrange(Figure1_posterior,Figure2_posterior,Figure3_posterior)
+Figure1_posterior #corresponds to Figure S3
+Figure2 <- grid.arrange(Figure2_posterior,Figure3_posterior)
 
-png("output/Figure1.png", width=9*ppi, height=12*ppi, res=ppi)
-plot(Figure1)
+png("output/Figure2.png", width=9*ppi, height=8*ppi, res=ppi)
+plot(Figure2)
 dev.off()
 
+png("output/FigureS3.png", width=10*ppi, height=5*ppi, res=ppi)
+plot(Figure1_posterior)
+dev.off()
