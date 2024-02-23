@@ -50,6 +50,19 @@ read_infiles <- function(flnm) {
 ## merge metadata (cleared for public release) from private database to produce final output (below)
 alone_df <- read.table("input/alone.txt", header = T) # load pre-computed dataset w/metadata
 
+numeric_columns <- alone_df %>%
+  select_if(is.numeric) %>%
+  select(-c(age, private_id), -contains("_c"))
+
+melted_data <- melt(numeric_columns)
+
+qq_plot_alone <- ggplot(melted_data, aes(sample = value)) +
+  geom_qq() +
+  geom_qq_line() +
+  facet_wrap(~variable, scales = "free_y") +
+  labs(title = "Q-Q Plots for Alone Condition", y="", x="")
+print(qq_plot_alone)
+
 ## IMPORT SOCIAL CSV DATASETS (N = 480) UNCOMMENT TO RE-CALCULATE RESULT FROM RAW DATA
 # social_dir <- "~/of/input/SOCIAL_CSV"
 # setwd(social_dir)
@@ -60,6 +73,19 @@ alone_df <- read.table("input/alone.txt", header = T) # load pre-computed datase
 
 ## merge metadata (cleared for public release) from private database to produce final output (below)
 social_df <- read.table("input/social.txt", header = T) # load pre-computed dataset w/metadata
+
+numeric_columns <- social_df %>%
+  select_if(is.numeric) %>%
+  select(-c(age, private_id), -contains("_c"))
+
+melted_data <- melt(numeric_columns)
+
+qq_plot_social <- ggplot(melted_data, aes(sample = value)) +
+  geom_qq() +
+  geom_qq_line() +
+  facet_wrap(~variable, scales = "free_y") +
+  labs(title = "Q-Q Plots for Social Condition", y="", x="")
+print(qq_plot_social)
 
 ## master datasheet (all data)
 all_df <- rbind(alone_df, social_df)
@@ -125,7 +151,7 @@ obj1_alone_vs_social_all_ac <- all_df %>%
   convert_as_factor(private_id, valence, AU) %>% #fix
   mutate(., AU_activity = as.numeric(AU_activity)) %>% # fix
   mutate(., valence = factor(valence, levels = c("amusement","neutral","fear"))) # refactor so neutral is middle plot
-summary(obj1_alone_stat_df_ac)
+summary(obj1_alone_vs_social_all_ac)
 
 obj1_alone_vs_social_all_stat_ac <- obj1_alone_vs_social_all_ac %>%
   group_by(AU) %>% 
@@ -458,6 +484,51 @@ model_df <- all_df %>%
   mutate(., valence = factor(valence, levels = c("neutral","amusement","fear"))) 
 str(model_df)
 
+# Calculate IQR and bounds for AU_intensity
+q1_int <- quantile(model_df$AU_intensity, 0.25)
+q3_int <- quantile(model_df$AU_intensity, 0.75)
+iqr_int <- q3_int - q1_int
+lower_bound_int <- q1_int - 1.5 * iqr_int
+upper_bound_int <- q3_int + 1.5 * iqr_int
+
+# Calculate IQR and bounds for AU_activity
+q1_act <- quantile(model_df$AU_activity, 0.25)
+q3_act <- quantile(model_df$AU_activity, 0.75)
+iqr_act <- q3_act - q1_act
+lower_bound_act <- q1_act - 1.5 * iqr_act
+upper_bound_act <- q3_act + 1.5 * iqr_act
+
+# Filter out rows with outliers for both AU_intensity and AU_activity
+model_df_filtered_int <- model_df %>%
+  filter(!(AU_intensity < lower_bound_int | AU_intensity > upper_bound_int))
+
+model_df_filtered_act <- model_df %>%
+  filter(!(AU_activity < lower_bound_act | AU_activity > upper_bound_act))
+
+# Calculate mean and standard deviation for AU_intensity and AU_activity
+# Calculate Z-scores for AU_intensity and AU_activity
+# Filter out rows with Z-scores >2 for both AU_intensity and AU_activity
+mean_intensity <- mean(model_df$AU_intensity)
+sd_intensity <- sd(model_df$AU_intensity)
+
+mean_activity <- mean(model_df$AU_activity)
+sd_activity <- sd(model_df$AU_activity)
+
+model_df <- model_df %>%
+  mutate(z_intensity = (AU_intensity - mean_intensity) / sd_intensity)
+
+model_df_filtered_int <- model_df %>%
+  filter(!abs(z_intensity) > 2) %>%
+  select(-z_intensity)  # Remove the temporary Z-score column
+
+model_df <- model_df %>%
+  select(-z_intensity) %>% # Remove the temporary Z-score column
+  mutate(z_activity = (AU_activity - mean_activity) / sd_activity)
+
+model_df_filtered_act <- model_df %>%
+  filter(!abs(z_activity) > 2) %>%
+  select(-z_activity)  # Remove the temporary Z-score column
+
 ## Model 1: AU activity
 model1 <- brm(formula = AU_activity ~  condition * valence  + gender + ethnicity + 
                 recognize_vid_binary + (1|private_id) + (1|stimulus), data=model_df, 
@@ -468,6 +539,17 @@ prior_summary(model1)
 hist(model_df$AU_activity)
 pp_check(model1, type = "stat", stat = 'mean', ndraws = 1000)
 traceplot_model1 <-plot(model1)#did chains behave well?
+
+#### Model 1_outliers: AU activity (excluding z score outliers -- see if results remain stable - same direction)
+model1_outliers <- brm(formula = AU_activity ~  condition * valence  + gender + ethnicity + 
+                recognize_vid_binary + (1|private_id) + (1|stimulus), data=model_df_filtered_act, 
+              family="zero_one_inflated_beta", warmup= 2000, iter = 10000, chains = 4, 
+              control = list(adapt_delta = 0.99), file = "output/model1_outliers")
+summary(model1_outliers)
+prior_summary(model1_outliers)
+hist(model_df_filtered_act$AU_activity)
+pp_check(model1_outliers, type = "stat", stat = 'mean', ndraws = 1000)
+traceplot_model1 <-plot(model1_outliers)#did chains behave well?
 
 #get posterior distributions
 posterior <- as.matrix(model1)
@@ -511,6 +593,14 @@ plot(model2)
 pp_check(model2, ndraws = 1000)
 pp_check(model2, type = "scatter_avg", ndraws = 1000)
 
+
+#### Model 2_outliers: AU intensity (excluding z score outliers -- see if results remain stable - same direction)
+model2_outliers <- brm(formula = AU_intensity ~ condition * valence + gender + ethnicity + 
+                recognize_vid_binary + (1|private_id) + (1|stimulus), data=model_df_filtered_int, 
+              family=weibull(), warmup= 2000, iter = 10000, chains = 4, 
+              control = list(adapt_delta = 0.99), file = "output/model2_outliers")
+summary(model2_outliers)#warnings about max tree depth are unproblematic, see: https://mc-stan.org/misc/warnings.html
+
 #get posterior distributions
 posterior <- as.matrix(model2)
 
@@ -543,6 +633,7 @@ summary(model3)
 prior_summary(model3)
 plot(model3)
 pp_check(model3, ndraws = 1000)
+
 
 # get the plots generated by conditional_effects()
 p3 = plot(conditional_effects(model3), plot=FALSE)
