@@ -664,7 +664,7 @@ Figure3_posterior <- Figmodel3 +scale_x_continuous(limits=c(-6,6),breaks=scales:
 
 library(gridExtra)
 Figure1_posterior #corresponds to Figure S3
-Figure2 <- grid.arrange(Figure2_posterior,Figure3_posterior)
+Figure2 <- grid.arrange(Figure2_posterior,Figure3_posterior) # Figure 2 here refers to Figure 1 in main manuscript
 
 png("output/Figure2.png", width=9*ppi, height=8*ppi, res=ppi)
 plot(Figure2)
